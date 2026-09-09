@@ -1,1 +1,205 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LINE OA License Admin V8</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:24px;background:#f6f7f9;color:#222}h1{margin-top:0}.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000b}input{padding:9px;border:1px solid #ccc;border-radius:7px;box-sizing:border-box}.wide{width:100%}.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.btn{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;background:#111;color:#fff}.green{background:#16803c}.red{background:#b42318}.gray{background:#666}.danger{background:#8b0000}.msg{margin-top:10px;padding:9px;border-radius:8px;background:#f1f3f5}.item{border:1px solid #ddd;border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.key{font-weight:700;font-family:monospace;font-size:15px}.active{color:#16803c}.revoked{color:#b42318}.muted{color:#666;font-size:12px}label{display:block;margin:8px 0;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style></head><body><h1>LINE OA License Admin V8</h1><div class="card"><b>Admin Token</b><input id="token" class="wide" type="password" placeholder="ใส่ ADMIN_TOKEN"><div class="row"><button class="btn" onclick="loadLicenses()">เข้าสู่ระบบ / โหลดคีย์</button></div><div id="msg" class="msg">ยังไม่ได้เชื่อมต่อ</div></div><div class="card"><h3>เพิ่ม License Key</h3><div class="grid"><label>Key<input id="key" class="wide" placeholder="CAT-002"></label><label>หมายเหตุ<input id="note" class="wide" placeholder="ลูกค้า A"></label></div><div class="muted">คีย์ทุกตัวเป็นแบบไม่มีวันหมดอายุ</div><div class="row"><button class="btn green" onclick="addKey()">+ เพิ่มคีย์</button></div></div><div class="card"><h3>License ทั้งหมด</h3><input id="search" class="wide" placeholder="ค้นหา Key..." oninput="render()"><div id="list"></div></div><script>let licenses={};const $=id=>document.getElementById(id);function headers(){return {'Authorization':'Bearer '+$('token').value.trim(),'Content-Type':'application/json'}}async function api(url,opt={}){const r=await fetch(url,{...opt,headers:{...headers(),...(opt.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}async function loadLicenses(){try{const d=await api('/api/admin/licenses');licenses=d.licenses||{};msg('โหลดสำเร็จ');render()}catch(e){msg('ผิดพลาด: '+e.message,true)}}async function addKey(){const key=$('key').value.trim();const note=$('note').value.trim();if(!key)return msg('กรุณากรอก Key',true);try{await api('/api/admin/licenses',{method:'POST',body:JSON.stringify({key,note})});$('key').value='';$('note').value='';await loadLicenses();msg('เพิ่ม '+key+' สำเร็จ')}catch(e){msg('เพิ่มไม่สำเร็จ: '+e.message,true)}}async function action(key,act){try{if(act==='delete'&&!confirm('ลบ '+key+' ?'))return;const method=act==='delete'?'DELETE':'POST';await api('/api/admin/licenses/'+encodeURIComponent(key)+(act==='delete'?'':('/'+(act==='revoke'?'revoke':'unrevoke'))),{method});await loadLicenses()}catch(e){msg('ทำรายการไม่สำเร็จ: '+e.message,true)}}function render(){const q=$('search').value.toLowerCase();const arr=Object.entries(licenses).filter(([k,v])=>(k+' '+(v.note||'')).toLowerCase().includes(q)).sort((a,b)=>a[0].localeCompare(b[0]));$('list').innerHTML=arr.length?arr.map(([k,v])=>`<div class="item"><div><div class="key">${esc(k)}</div><div class="${v.revoked?'revoked':'active'}">${v.revoked?'🔴 ถูกบล็อก':'🟢 ใช้งานได้'}</div><div class="muted">${esc(v.note||'')} · สร้าง ${new Date(v.createdAt).toLocaleString('th-TH')}</div></div><div class="row"><button class="btn ${v.revoked?'green':'red'}" onclick="action('${js(k)}','${v.revoked?'unrevoke':'revoke'}')">${v.revoked?'🔓 ปลดบล็อก':'🔒 บล็อก'}</button><button class="btn danger" onclick="action('${js(k)}','delete')">🗑 ลบ</button></div></div>`).join(''):'<div class="muted">ยังไม่มีคีย์</div>'}function msg(t,bad=false){$('msg').textContent=t;$('msg').style.background=bad?'#fee4e2':'#f1f3f5'}function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\':'&#92;'}[c]))}function js(s){return String(s).replace(/\/g,'\\').replace(/'/g,"\'")} </script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LINE OA License Admin V8</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:24px;background:#f6f7f9;color:#222}
+h1{margin-top:0}.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000b}
+input{padding:9px;border:1px solid #ccc;border-radius:7px;box-sizing:border-box}.wide{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.btn{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;background:#111;color:#fff}
+.green{background:#16803c}.red{background:#b42318}.danger{background:#8b0000}.msg{margin-top:10px;padding:9px;border-radius:8px;background:#f1f3f5}
+.item{border:1px solid #ddd;border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.key{font-weight:700;font-family:monospace;font-size:15px}.active{color:#16803c}.revoked{color:#b42318}.muted{color:#666;font-size:12px}
+label{display:block;margin:8px 0;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>LINE OA License Admin V8</h1>
+
+<div class="card">
+  <b>Admin Token</b>
+  <input id="token" class="wide" type="password" placeholder="ใส่ ADMIN_TOKEN">
+  <div class="row">
+    <button id="loadBtn" class="btn">เข้าสู่ระบบ / โหลดคีย์</button>
+  </div>
+  <div id="msg" class="msg">ยังไม่ได้เชื่อมต่อ</div>
+</div>
+
+<div class="card">
+  <h3>เพิ่ม License Key</h3>
+  <div class="grid">
+    <label>Key<input id="key" class="wide" placeholder="CAT-002"></label>
+    <label>หมายเหตุ<input id="note" class="wide" placeholder="ลูกค้า A"></label>
+  </div>
+  <div class="muted">คีย์ทุกตัวเป็นแบบไม่มีวันหมดอายุ</div>
+  <div class="row">
+    <button id="addBtn" class="btn green">+ เพิ่มคีย์</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>License ทั้งหมด</h3>
+  <input id="search" class="wide" placeholder="ค้นหา Key...">
+  <div id="list"></div>
+</div>
+
+<script>
+'use strict';
+
+let licenses = {};
+
+const $ = id => document.getElementById(id);
+
+function headers() {
+  return {
+    'Authorization': 'Bearer ' + $('token').value.trim(),
+    'Content-Type': 'application/json'
+  };
+}
+
+async function api(url, opt = {}) {
+  const r = await fetch(url, {
+    ...opt,
+    headers: {...headers(), ...(opt.headers || {})}
+  });
+  let d = {};
+  try { d = await r.json(); } catch {}
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+
+function msg(text, bad = false) {
+  $('msg').textContent = text;
+  $('msg').style.background = bad ? '#fee4e2' : '#f1f3f5';
+}
+
+async function loadLicenses() {
+  try {
+    const d = await api('/api/admin/licenses');
+    licenses = d.licenses || {};
+    msg('โหลดสำเร็จ');
+    render();
+  } catch (e) {
+    msg('ผิดพลาด: ' + e.message, true);
+  }
+}
+
+async function addKey() {
+  const key = $('key').value.trim();
+  const note = $('note').value.trim();
+
+  if (!key) {
+    msg('กรุณากรอก Key', true);
+    return;
+  }
+
+  try {
+    await api('/api/admin/licenses', {
+      method: 'POST',
+      body: JSON.stringify({key, note})
+    });
+    $('key').value = '';
+    $('note').value = '';
+    await loadLicenses();
+    msg('เพิ่ม ' + key + ' สำเร็จ');
+  } catch (e) {
+    msg('เพิ่มไม่สำเร็จ: ' + e.message, true);
+  }
+}
+
+async function action(key, act) {
+  try {
+    if (act === 'delete' && !confirm('ลบ ' + key + ' ?')) return;
+
+    const method = act === 'delete' ? 'DELETE' : 'POST';
+    const suffix = act === 'delete'
+      ? ''
+      : '/' + (act === 'revoke' ? 'revoke' : 'unrevoke');
+
+    await api('/api/admin/licenses/' + encodeURIComponent(key) + suffix, {method});
+    await loadLicenses();
+  } catch (e) {
+    msg('ทำรายการไม่สำเร็จ: ' + e.message, true);
+  }
+}
+
+function esc(value) {
+  return String(value).replace(/[&<>"]/g, function(c) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;'
+    }[c];
+  });
+}
+
+function render() {
+  const q = $('search').value.toLowerCase();
+
+  const arr = Object.entries(licenses)
+    .filter(([k, v]) => (k + ' ' + (v.note || '')).toLowerCase().includes(q))
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  const list = $('list');
+  list.innerHTML = '';
+
+  if (!arr.length) {
+    list.innerHTML = '<div class="muted">ยังไม่มีคีย์</div>';
+    return;
+  }
+
+  arr.forEach(([k, v]) => {
+    const item = document.createElement('div');
+    item.className = 'item';
+
+    const info = document.createElement('div');
+
+    const keyEl = document.createElement('div');
+    keyEl.className = 'key';
+    keyEl.textContent = k;
+
+    const status = document.createElement('div');
+    status.className = v.revoked ? 'revoked' : 'active';
+    status.textContent = v.revoked ? '🔴 ถูกบล็อก' : '🟢 ใช้งานได้';
+
+    const note = document.createElement('div');
+    note.className = 'muted';
+    const created = v.createdAt ? new Date(v.createdAt).toLocaleString('th-TH') : '-';
+    note.textContent = (v.note || '') + ' · สร้าง ' + created;
+
+    info.appendChild(keyEl);
+    info.appendChild(status);
+    info.appendChild(note);
+
+    const buttons = document.createElement('div');
+    buttons.className = 'row';
+
+    const blockBtn = document.createElement('button');
+    blockBtn.className = 'btn ' + (v.revoked ? 'green' : 'red');
+    blockBtn.textContent = v.revoked ? '🔓 ปลดบล็อก' : '🔒 บล็อก';
+    blockBtn.addEventListener('click', () => action(k, v.revoked ? 'unrevoke' : 'revoke'));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn danger';
+    deleteBtn.textContent = '🗑 ลบ';
+    deleteBtn.addEventListener('click', () => action(k, 'delete'));
+
+    buttons.appendChild(blockBtn);
+    buttons.appendChild(deleteBtn);
+
+    item.appendChild(info);
+    item.appendChild(buttons);
+    list.appendChild(item);
+  });
+}
+
+$('loadBtn').addEventListener('click', loadLicenses);
+$('addBtn').addEventListener('click', addKey);
+$('search').addEventListener('input', render);
+</script>
+</body>
+</html>
