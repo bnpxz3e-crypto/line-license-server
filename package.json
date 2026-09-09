@@ -1,12 +1,9 @@
 {
-  "name": "line-license-server",
-  "version": "1.0.0",
+  "name": "line-oa-calculator-license-server",
+  "version": "1.1.0",
   "private": true,
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
-    "express": "^4.21.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
   }
 }
